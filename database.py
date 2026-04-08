@@ -101,12 +101,16 @@ def college_update(old_code, code, name):
 def college_delete(code):
     conn = get_connection()
     try:
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("UPDATE program SET college='N/A' WHERE college=?", (code,))
         conn.execute("DELETE FROM college WHERE code=?", (code,))
         conn.commit()
         return True, None
-    except sqlite3.IntegrityError as e:
-        return False, "Cannot delete: programs are assigned to this college."
+    except Exception as e:
+        conn.rollback()
+        return False, str(e)
     finally:
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.close()
 
 def college_all():
@@ -175,12 +179,16 @@ def program_update(old_code, code, name, college):
 def program_delete(code):
     conn = get_connection()
     try:
+        conn.execute("PRAGMA foreign_keys = OFF")
+        conn.execute("UPDATE student SET course='N/A' WHERE course=?", (code,))
         conn.execute("DELETE FROM program WHERE code=?", (code,))
         conn.commit()
         return True, None
-    except sqlite3.IntegrityError as e:
-        return False, "Cannot delete: students are enrolled in this program."
+    except Exception as e:
+        conn.rollback()
+        return False, str(e)
     finally:
+        conn.execute("PRAGMA foreign_keys = ON")
         conn.close()
 
 def program_all():
@@ -281,3 +289,31 @@ def get_stats():
     colleges = c.fetchone()[0]
     conn.close()
     return students, programs, colleges
+
+# ─── Detail getters (with counts) ─────────────────────────────────────────────
+
+def college_get_detail(code):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT cl.code, cl.name,
+               (SELECT COUNT(*) FROM program WHERE college = cl.code) AS program_count
+        FROM college cl WHERE cl.code = ?
+    """, (code,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None
+
+def program_get_detail(code):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT p.code, p.name, p.college, cl.name AS college_name,
+               (SELECT COUNT(*) FROM student WHERE course = p.code) AS student_count
+        FROM program p
+        LEFT JOIN college cl ON cl.code = p.college
+        WHERE p.code = ?
+    """, (code,))
+    row = c.fetchone()
+    conn.close()
+    return dict(row) if row else None

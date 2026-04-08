@@ -1,66 +1,76 @@
 """
-seed.py — populates the database with colleges, programs, and 5000+ students.
-Run once: python seed.py
+seed.py — populates the DB with MSU-IIT colleges, undergraduate programs, and 5200 students.
 """
-
 import random
-import sqlite3
 from database import init_db, get_connection
 
 COLLEGES = [
     ("CCS",  "College of Computer Studies"),
     ("COE",  "College of Engineering"),
     ("CED",  "College of Education"),
-    ("CBA",  "College of Business Administration"),
+    ("CBA",  "College of Business Administration and Accountancy"),
     ("CASS", "College of Arts and Social Sciences"),
-    ("CN",   "College of Nursing"),
-    ("CP",   "College of Pharmacy"),
-    ("CAFA", "College of Architecture and Fine Arts"),
-    ("CL",   "College of Law"),
-    ("CM",   "College of Medicine"),
+    ("CSM",  "College of Science and Mathematics"),
+    ("CON",  "College of Nursing"),
+    ("CST",  "College of Science and Technology"),
 ]
 
 PROGRAMS = [
     # CCS
-    ("BSCS",   "Bachelor of Science in Computer Science",          "CCS"),
-    ("BSIT",   "Bachelor of Science in Information Technology",    "CCS"),
-    ("BSIS",   "Bachelor of Science in Information Systems",       "CCS"),
-    ("BSEMC",  "Bachelor of Science in Entertainment & Multimedia Computing", "CCS"),
+    ("BSCS",    "Bachelor of Science in Computer Science",                        "CCS"),
+    ("BSIT",    "Bachelor of Science in Information Technology",                  "CCS"),
+    ("BSIS",    "Bachelor of Science in Information Systems",                     "CCS"),
+    ("BSCA",    "Bachelor of Science in Computer Applications",                   "CCS"),
     # COE
-    ("BSCE",   "Bachelor of Science in Civil Engineering",         "COE"),
-    ("BSEE",   "Bachelor of Science in Electrical Engineering",    "COE"),
-    ("BSME",   "Bachelor of Science in Mechanical Engineering",    "COE"),
-    ("BSECE",  "Bachelor of Science in Electronics Engineering",   "COE"),
-    ("BSIE",   "Bachelor of Science in Industrial Engineering",    "COE"),
-    ("BSCHE",  "Bachelor of Science in Chemical Engineering",      "COE"),
+    ("BSCE",    "Bachelor of Science in Civil Engineering",                       "COE"),
+    ("BSEE",    "Bachelor of Science in Electrical Engineering",                  "COE"),
+    ("BSECE",   "Bachelor of Science in Electronics Engineering",                 "COE"),
+    ("BSCpE",   "Bachelor of Science in Computer Engineering",                    "COE"),
+    ("BSME",    "Bachelor of Science in Mechanical Engineering",                  "COE"),
+    ("BSChE",   "Bachelor of Science in Chemical Engineering",                    "COE"),
+    ("BSCerE",  "Bachelor of Science in Ceramic Engineering",                     "COE"),
+    ("BSMetE",  "Bachelor of Science in Metallurgical Engineering",               "COE"),
+    ("BSEME",   "Bachelor of Science in Mining Engineering",                      "COE"),
+    ("BSEnE",   "Bachelor of Science in Environmental Engineering",               "COE"),
+    ("BSIAM",   "Bachelor of Science in Industrial Automation and Mechatronics",  "COE"),
     # CED
-    ("BEED",   "Bachelor of Elementary Education",                 "CED"),
-    ("BSED",   "Bachelor of Secondary Education",                  "CED"),
-    ("BSPE",   "Bachelor of Science in Physical Education",        "CED"),
+    ("BEEd",    "Bachelor of Elementary Education",                               "CED"),
+    ("BSEd",    "Bachelor of Secondary Education",                                "CED"),
+    ("BTLEd",   "Bachelor of Technology and Livelihood Education",                "CED"),
+    ("BTVTEd",  "Bachelor of Technical-Vocational Teacher Education",             "CED"),
+    ("BPEd",    "Bachelor of Physical Education",                                 "CED"),
     # CBA
-    ("BSBA",   "Bachelor of Science in Business Administration",   "CBA"),
-    ("BSACCO", "Bachelor of Science in Accountancy",               "CBA"),
-    ("BSFM",   "Bachelor of Science in Financial Management",      "CBA"),
-    ("BSHM",   "Bachelor of Science in Hospitality Management",    "CBA"),
-    ("BSTM",   "Bachelor of Science in Tourism Management",        "CBA"),
+    ("BSA",     "Bachelor of Science in Accountancy",                             "CBA"),
+    ("BSBA",    "Bachelor of Science in Business Administration",                 "CBA"),
+    ("BSHM",    "Bachelor of Science in Hospitality Management",                  "CBA"),
+    ("BSEcon",  "Bachelor of Science in Economics",                               "CBA"),
+    ("BSENTREP","Bachelor of Science in Entrepreneurship",                        "CBA"),
     # CASS
-    ("ABCOMM", "Bachelor of Arts in Communication",                "CASS"),
-    ("ABPSY",  "Bachelor of Arts in Psychology",                   "CASS"),
-    ("ABSOC",  "Bachelor of Arts in Sociology",                    "CASS"),
-    ("ABPOL",  "Bachelor of Arts in Political Science",            "CASS"),
-    ("ABFIL",  "Bachelor of Arts in Filipino",                     "CASS"),
-    # CN
-    ("BSN",    "Bachelor of Science in Nursing",                   "CN"),
-    # CP
-    ("BSPHAR", "Bachelor of Science in Pharmacy",                  "CP"),
-    # CAFA
-    ("BSARCH", "Bachelor of Science in Architecture",              "CAFA"),
-    ("BSID",   "Bachelor of Science in Interior Design",           "CAFA"),
-    ("BFA",    "Bachelor of Fine Arts",                            "CAFA"),
-    # CL
-    ("JD",     "Juris Doctor",                                     "CL"),
-    # CM
-    ("MD",     "Doctor of Medicine",                               "CM"),
+    ("BAELS",   "Bachelor of Arts in English Language Studies",                   "CASS"),
+    ("BALCS",   "Bachelor of Arts in Literary and Cultural Studies",              "CASS"),
+    ("BAHis",   "Bachelor of Arts in History",                                    "CASS"),
+    ("BAPoS",   "Bachelor of Arts in Political Science",                          "CASS"),
+    ("BSPhil",  "Bachelor of Science in Philosophy - Applied Ethics",             "CASS"),
+    ("BAPsych", "Bachelor of Arts in Psychology",                                 "CASS"),
+    ("BSPsych", "Bachelor of Science in Psychology",                              "CASS"),
+    ("BASoc",   "Bachelor of Arts in Sociology",                                  "CASS"),
+    ("BAFil",   "Batsilyer ng Sining sa Filipino",                                "CASS"),
+    # CSM
+    ("BSBio",   "Bachelor of Science in Biology",                                 "CSM"),
+    ("BSChem",  "Bachelor of Science in Chemistry",                               "CSM"),
+    ("BSMath",  "Bachelor of Science in Mathematics",                             "CSM"),
+    ("BSStat",  "Bachelor of Science in Statistics",                              "CSM"),
+    ("BSPhys",  "Bachelor of Science in Physics",                                 "CSM"),
+    ("BSMarBio","Bachelor of Science in Marine Biology",                          "CSM"),
+    # CON
+    ("BSN",     "Bachelor of Science in Nursing",                                 "CON"),
+    # CST
+    ("BETMMt",  "Bachelor of Engineering Technology - Metallurgical",             "CST"),
+    ("BETChET", "Bachelor of Engineering Technology - Chemical",                  "CST"),
+    ("BETCET",  "Bachelor of Engineering Technology - Civil",                     "CST"),
+    ("BETEET",  "Bachelor of Engineering Technology - Electrical",                "CST"),
+    ("BETEST",  "Bachelor of Engineering Technology - Electronics",               "CST"),
+    ("BETMET",  "Bachelor of Engineering Technology - Mechanical",                "CST"),
 ]
 
 FIRST_NAMES_M = [
@@ -70,8 +80,8 @@ FIRST_NAMES_M = [
     "Jacob","Gary","Nicholas","Eric","Jonathan","Stephen","Larry","Justin","Scott","Brandon",
     "Benjamin","Samuel","Raymond","Gregory","Frank","Alexander","Patrick","Jack","Dennis","Jerry",
     "Juan","Carlos","Luis","Miguel","Marco","Jose","Angelo","Jerome","Renz","Jayson",
-    "Mark","Noel","Aldrin","Rommel","Ariel","Ronaldo","Dante","Erwin","Rodel","Gerry",
-    "Lester","Marvin","Nico","Kurt","Lance","Clark","Neil","Ivan","Leon","Adrian",
+    "Noel","Aldrin","Rommel","Ariel","Ronaldo","Dante","Erwin","Rodel","Gerry","Lester",
+    "Marvin","Nico","Kurt","Lance","Clark","Neil","Ivan","Leon","Adrian","Cyril",
 ]
 
 FIRST_NAMES_F = [
@@ -80,8 +90,8 @@ FIRST_NAMES_F = [
     "Michelle","Carol","Amanda","Melissa","Deborah","Stephanie","Rebecca","Sharon","Laura","Cynthia",
     "Kathleen","Amy","Angela","Shirley","Anna","Brenda","Pamela","Emma","Nicole","Helen",
     "Maria","Liza","Jasmine","Princess","Angel","Christine","Grace","Ana","Rosario","Cynthia",
-    "Maricel","Hazel","Faith","Hope","Joy","Lovely","Marites","Natividad","Rowena","Sheila",
-    "Trisha","Vanessa","Kathrina","Rhea","Leilani","Cristine","Pia","Nina","Lea","Aira",
+    "Maricel","Hazel","Faith","Hope","Joy","Lovely","Marites","Rowena","Sheila","Trisha",
+    "Vanessa","Kathrina","Rhea","Leilani","Cristine","Pia","Nina","Lea","Aira","Bea",
 ]
 
 LAST_NAMES = [
@@ -90,27 +100,25 @@ LAST_NAMES = [
     "De Leon","Dela Cruz","Ramirez","Navarro","Valdez","Fernandez","Pascual","Herrera","Castro","Medina",
     "Soriano","Aguilar","Luna","Lim","Tan","Go","Sy","Ong","Co","Chua",
     "Domingo","Delos Santos","Dela Torre","Espiritu","Mercado","Salazar","Santiago","Tolentino","Vega","Vergara",
-    "Abella","Ablaza","Abad","Abrera","Acosta","Adriano","Alcantara","Aldana","Alfonso","Alipio",
-    "Almario","Alvarado","Alvarez","Andres","Angeles","Antonio","Aranda","Arce","Arcega","Arceo",
-    "Arenas","Arguelles","Arias","Arizala","Arroyo","Arteche","Asuncion","Atienza","Austria","Avila",
-    "Bacalso","Bacani","Bacolod","Baguio","Balboa","Balderas","Baldos","Bello","Bernabe","Bernal",
-    "Borja","Briones","Buenaventura","Caballero","Cabanlit","Cabrera","Cabrido","Cagadas","Caguioa","Cahilig",
+    "Abella","Ablaza","Abad","Acosta","Adriano","Alcantara","Aldana","Alfonso","Almario","Alvarado",
+    "Alvarez","Andres","Angeles","Antonio","Aranda","Arce","Arcega","Arenas","Arias","Arroyo",
+    "Asuncion","Atienza","Austria","Avila","Bacalso","Bacani","Balboa","Balderas","Bello","Bernabe",
+    "Bernal","Borja","Briones","Buenaventura","Caballero","Cabrera","Campos","Capuno","Cariaga","Catacutan",
+    "Cervantes","Claudio","Clemente","Colon","Corpuz","Cortez","Cunanan","Dacanay","Dalisay","David",
+    "De Guzman","De Jesus","De Villa","Defensor","Del Rosario","Dela Paz","Delgado","Dizon","Duarte","Dumlao",
+    "Enriquez","Escoto","Esguerra","Espino","Estrada","Evangelista","Fajardo","Faustino","Felipe","Ferrer",
+    "Francisco","Fuentes","Galang","Galvez","Geronda","Gloria","Gomez","Guerrero","Guevarra","Guillermo",
+    "Gutierrez","Guzman","Hernandez","Ilagan","Ilustre","Imperial","Jimenez","Lagrimas","Laserna","Laurel",
 ]
-
-GENDERS = ["Male", "Female"]
-YEARS = [1, 2, 3, 4]
-
 
 def already_seeded(conn):
     c = conn.cursor()
     c.execute("SELECT COUNT(*) FROM student")
     return c.fetchone()[0] >= 100
 
-
 def seed():
     init_db()
     conn = get_connection()
-
     if already_seeded(conn):
         print("Database already seeded. Skipping.")
         conn.close()
@@ -118,7 +126,6 @@ def seed():
 
     print("Seeding colleges...")
     conn.executemany("INSERT OR IGNORE INTO college (code, name) VALUES (?, ?)", COLLEGES)
-
     print("Seeding programs...")
     conn.executemany("INSERT OR IGNORE INTO program (code, name, college) VALUES (?, ?, ?)", PROGRAMS)
 
@@ -126,40 +133,28 @@ def seed():
     program_codes = [p[0] for p in PROGRAMS]
     used_ids = set()
     students = []
-
-    year_range = range(2018, 2026)
-
     for _ in range(5200):
-        # Generate unique ID: YYYY-NNNN
         while True:
-            yr = random.choice(year_range)
-            seq = random.randint(1, 9999)
+            yr  = random.randint(2018, 2025)
+            seq = random.randint(1, 3000)
             sid = f"{yr}-{seq:04d}"
             if sid not in used_ids:
                 used_ids.add(sid)
                 break
-
-        gender = random.choice(GENDERS)
-        if gender == "Male":
-            firstname = random.choice(FIRST_NAMES_M)
-        else:
-            firstname = random.choice(FIRST_NAMES_F)
-
+        gender    = random.choice(["Male", "Female"])
+        firstname = random.choice(FIRST_NAMES_M if gender == "Male" else FIRST_NAMES_F)
         lastname  = random.choice(LAST_NAMES)
         course    = random.choice(program_codes)
-        year      = random.choice(YEARS)
-
+        year      = random.choice([1, 2, 3, 4])
         students.append((sid, firstname, lastname, course, year, gender))
 
     conn.executemany(
         "INSERT OR IGNORE INTO student (id, firstname, lastname, course, year, gender) VALUES (?,?,?,?,?,?)",
-        students
+        students,
     )
-
     conn.commit()
     conn.close()
-    print("Done! 5200 students inserted.")
-
+    print(f"Done! {len(students)} students inserted.")
 
 if __name__ == "__main__":
     seed()
