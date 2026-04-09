@@ -2,12 +2,12 @@
 
 A modern Student Information System using **Python + SQLite + PyQt6**.
 
-## ✅ Requirements
+## Requirements
 
 - Python 3.10 or higher (https://python.org)
 - pip (comes with Python)
 
-## 🚀 Quick Start (Windows)
+## Quick Start (Windows)
 
 Open **Command Prompt** or **PowerShell** in this folder, then:
 
@@ -20,11 +20,11 @@ python main.py
 ```
 
 That's it. The database file (`students.db`) is created automatically on first run,
-and 5,200 students are pre-seeded for you.
+and 5,200 students are pre-seeded.
 
 ---
 
-## 📁 Project Structure
+## Project Structure
 
 ```
 StudentInfoSystem/
@@ -38,7 +38,7 @@ StudentInfoSystem/
 
 ---
 
-## 🗃️ Database Schema
+## Database Schema
 
 ```sql
 college  (code PK, name)
@@ -48,7 +48,7 @@ student  (id PK "YYYY-NNNN", firstname, lastname, course FK→program, year, gen
 
 ---
 
-## ✨ Features
+## Features
 
 | Feature        | Details |
 |----------------|---------|
@@ -57,12 +57,12 @@ student  (id PK "YYYY-NNNN", firstname, lastname, course FK→program, year, gen
 | Search         | Real-time search across all relevant fields |
 | Sort           | Click any column header to sort asc/desc |
 | Pagination     | 10 / 25 / 50 / 100 rows per page, smart page buttons |
-| Pre-seeded     | 10 colleges, 30 programs, 5200 students |
-| Foreign Keys   | Cannot delete a college with programs; cannot delete a program with students |
+| Pre-seeded     | 7 colleges, 40 programs, 5200 students |
+| Themes         | Night and Day Mode for preference |
 
 ---
 
-## 🔑 SQL Concepts Used (for your report)
+## SQL Concepts Used
 
 - **DDL**: `CREATE TABLE`, `CREATE INDEX`
 - **DML**: `INSERT`, `UPDATE`, `DELETE`, `SELECT`
