@@ -8,11 +8,10 @@ COLLEGES = [
     ("CCS",  "College of Computer Studies"),
     ("COE",  "College of Engineering"),
     ("CED",  "College of Education"),
-    ("CBA",  "College of Business Administration and Accountancy"),
+    ("CEBA",  "College of Economics, Business, and Accountancy"),
     ("CASS", "College of Arts and Social Sciences"),
     ("CSM",  "College of Science and Mathematics"),
-    ("CON",  "College of Nursing"),
-    ("CST",  "College of Science and Technology"),
+    ("CHS",  "College of Health Sciences"),
 ]
 
 PROGRAMS = [
@@ -39,12 +38,12 @@ PROGRAMS = [
     ("BTLEd",   "Bachelor of Technology and Livelihood Education",                "CED"),
     ("BTVTEd",  "Bachelor of Technical-Vocational Teacher Education",             "CED"),
     ("BPEd",    "Bachelor of Physical Education",                                 "CED"),
-    # CBA
-    ("BSA",     "Bachelor of Science in Accountancy",                             "CBA"),
-    ("BSBA",    "Bachelor of Science in Business Administration",                 "CBA"),
-    ("BSHM",    "Bachelor of Science in Hospitality Management",                  "CBA"),
-    ("BSEcon",  "Bachelor of Science in Economics",                               "CBA"),
-    ("BSENTREP","Bachelor of Science in Entrepreneurship",                        "CBA"),
+    # CEBA
+    ("BSA",     "Bachelor of Science in Accountancy",                             "CEBA"),
+    ("BSBA",    "Bachelor of Science in Business Administration",                 "CEBA"),
+    ("BSHM",    "Bachelor of Science in Hospitality Management",                  "CEBA"),
+    ("BSEcon",  "Bachelor of Science in Economics",                               "CEBA"),
+    ("BSENTREP","Bachelor of Science in Entrepreneurship",                        "CEBA"),
     # CASS
     ("BAELS",   "Bachelor of Arts in English Language Studies",                   "CASS"),
     ("BALCS",   "Bachelor of Arts in Literary and Cultural Studies",              "CASS"),
@@ -62,15 +61,8 @@ PROGRAMS = [
     ("BSStat",  "Bachelor of Science in Statistics",                              "CSM"),
     ("BSPhys",  "Bachelor of Science in Physics",                                 "CSM"),
     ("BSMarBio","Bachelor of Science in Marine Biology",                          "CSM"),
-    # CON
-    ("BSN",     "Bachelor of Science in Nursing",                                 "CON"),
-    # CST
-    ("BETMMt",  "Bachelor of Engineering Technology - Metallurgical",             "CST"),
-    ("BETChET", "Bachelor of Engineering Technology - Chemical",                  "CST"),
-    ("BETCET",  "Bachelor of Engineering Technology - Civil",                     "CST"),
-    ("BETEET",  "Bachelor of Engineering Technology - Electrical",                "CST"),
-    ("BETEST",  "Bachelor of Engineering Technology - Electronics",               "CST"),
-    ("BETMET",  "Bachelor of Engineering Technology - Mechanical",                "CST"),
+    # CHS
+    ("BSN",     "Bachelor of Science in Nursing",                                 "CHS"),
 ]
 
 FIRST_NAMES_M = [
@@ -129,11 +121,11 @@ def seed():
     print("Seeding programs...")
     conn.executemany("INSERT OR IGNORE INTO program (code, name, college) VALUES (?, ?, ?)", PROGRAMS)
 
-    print("Seeding 5200 students...")
+    print("Seeding 5000 students...")
     program_codes = [p[0] for p in PROGRAMS]
     used_ids = set()
     students = []
-    for _ in range(5200):
+    for _ in range(5000):
         while True:
             yr  = random.randint(2018, 2025)
             seq = random.randint(1, 3000)
