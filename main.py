@@ -1,168 +1,346 @@
 """
 main.py — MSU-IIT Student Information System
+Redesigned: left sidebar nav + white content area, inspired by modern dashboard UI
 """
 import sys
 from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
-    QTabWidget, QTableWidget, QTableWidgetItem, QHeaderView,
+    QStackedWidget, QTableWidget, QTableWidgetItem, QHeaderView,
     QPushButton, QLineEdit, QLabel, QFrame, QMessageBox,
-    QComboBox, QAbstractItemView
+    QComboBox, QAbstractItemView, QSizePolicy, QSpacerItem,
+    QGraphicsDropShadowEffect
 )
-from PyQt6.QtCore import Qt, QTimer
-from PyQt6.QtGui import QFont, QColor
+from PyQt6.QtCore import Qt, QTimer, QSize
+from PyQt6.QtGui import QFont, QColor, QPainter, QBrush, QPen, QLinearGradient
 
 import database as db
 from dialogs import (CollegeDialog, ProgramDialog, StudentDialog,
                      CollegeDetailDialog, ProgramDetailDialog, StudentDetailDialog)
 from seed import seed
 
-# ── Palette ────────────────────────────────────────────────────────────────────
-# Main:   #F1ECE4  (warm linen)
-# Accent: #68191F  (deep crimson)
-# Dark:   #3D0B0E  (darker crimson)
-# Card:   #E8D8C4  (sandy beige)
-# Border: #C9B89E  (warm tan)
-# Text:   #2D1A1A  (dark brown-black)
-# Muted:  #7A5C5C  (muted rose-brown)
+# ─────────────────────────────────────────────────────────────────────────────
+# Palette
+#   Sidebar bg:   #1E2A4A  (deep navy)
+#   Sidebar sel:  #2E3F6E  (medium navy)
+#   Accent:       #4B72B8  (cornflower blue)
+#   Content bg:   #F0F4FA  (very light blue-grey)
+#   Card bg:      #FFFFFF
+#   Card border:  #E4EAF5
+#   Text primary: #1A2340
+#   Text muted:   #7A8BAD
+#   Header bg:    #FFFFFF
+#   Danger:       #E05252
+# ─────────────────────────────────────────────────────────────────────────────
 
 STYLE = """
-QMainWindow, QDialog, QWidget {
-    background: #F1ECE4;
-    color: #2D1A1A;
-    font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+/* ── Global ── */
+* { font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif; }
+
+QMainWindow, QDialog {
+    background: #F0F4FA;
+}
+QWidget {
+    background: transparent;
+    color: #1A2340;
     font-size: 13px;
 }
 
-/* ── Header ── */
-#header {
-    background: #68191F;
-    min-height: 68px; max-height: 68px;
+/* ── Sidebar ── */
+#sidebar {
+    background: #1E2A4A;
+    min-width: 220px; max-width: 220px;
 }
-#appTitle {
-    font-size: 19px; font-weight: 700; color: #F1ECE4; letter-spacing: 0.4px;
+#sidebarLogo {
+    color: #FFFFFF;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
 }
-#appSubtitle {
-    font-size: 10px; color: #C9A0A3; letter-spacing: 1.8px;
+#sidebarSub {
+    color: #6A7FA8;
+    font-size: 9px;
+    letter-spacing: 1.4px;
+}
+#sidebarDivider {
+    background: #2A3A60;
+    max-height: 1px; min-height: 1px;
+}
+#sidebarSectionLabel {
+    color: #4A5E82;
+    font-size: 9px;
+    font-weight: 700;
+    letter-spacing: 1.8px;
+    padding: 0 20px;
 }
 
-/* ── Stats bar ── */
-#statsBar { background: #68191F; border-bottom: 1px solid #C9B89E; }
+/* Sidebar nav buttons */
+#navBtn {
+    background: transparent;
+    color: #8A9BC0;
+    border: none;
+    border-radius: 10px;
+    text-align: left;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 500;
+}
+#navBtn:hover { background: #243258; color: #C8D8F0; }
+#navBtnActive {
+    background: #2E3F6E;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 10px;
+    text-align: left;
+    padding: 11px 16px;
+    font-size: 13px;
+    font-weight: 600;
+}
+#navBtnActive:hover { background: #354A80; }
+
+/* ── Content area ── */
+#contentArea { background: #F0F4FA; }
+
+/* ── Page header ── */
+#pageHeader { background: #FFFFFF; border-bottom: 1px solid #E4EAF5; }
+#pageTitle { font-size: 20px; font-weight: 700; color: #1A2340; }
+#pageSubtitle { font-size: 12px; color: #7A8BAD; }
+
+/* ── Stat cards ── */
 #statCard {
-    background: #F1ECE4; border: 1px solid #C9B89E; border-radius: 10px;
-    padding: 12px 22px; min-width: 140px;
+    background: #FFFFFF;
+    border: 1px solid #E4EAF5;
+    border-radius: 14px;
+    padding: 0;
 }
-#statNumber { font-size: 26px; font-weight: 700; color: #68191F; }
-#statLabel  { font-size: 10px; color: #7A5C5C; text-transform: uppercase; letter-spacing: 1.2px; }
+#statNumber { font-size: 28px; font-weight: 700; color: #1A2340; }
+#statLabel  { font-size: 10px; color: #7A8BAD; font-weight: 600; letter-spacing: 1.2px; }
+#statIcon   { font-size: 22px; }
 
-/* ── Tabs ── */
-QTabWidget::pane { border: none; background: #F1ECE4; }
-QTabBar::tab {
-    background: transparent; color: #7A5C5C;
-    padding: 12px 30px; font-size: 13px; font-weight: 500;
-    border-bottom: 2px solid transparent; margin-right: 4px;
+/* ── Table card ── */
+#tableCard {
+    background: #FFFFFF;
+    border: 1px solid #E4EAF5;
+    border-radius: 14px;
 }
-QTabBar::tab:selected  { color: #68191F; border-bottom: 2px solid #68191F; }
-QTabBar::tab:hover:!selected { color: #3D0B0E; }
 
-/* ── Toolbar ── */
-#toolbar {
-    background: #EAE2D6; border-bottom: 1px solid #C9B89E;
-    padding: 10px 20px; min-height: 58px; max-height: 58px;
-}
+/* ── Toolbar inside table card ── */
+#cardToolbar { background: #FFFFFF; border-radius: 14px 14px 0 0; }
 
 /* ── Search ── */
 QLineEdit {
-    background: #F1ECE4; border: 1.5px solid #C9B89E; border-radius: 8px;
-    color: #2D1A1A; padding: 8px 14px; font-size: 13px; min-width: 260px;
+    background: #F0F4FA;
+    border: 1.5px solid #E4EAF5;
+    border-radius: 10px;
+    color: #1A2340;
+    padding: 9px 14px 9px 36px;
+    font-size: 13px;
+    min-width: 240px;
 }
-QLineEdit:focus { border-color: #68191F; }
+QLineEdit:focus { border-color: #4B72B8; background: #FFFFFF; }
 
 /* ── Buttons ── */
-QPushButton { border-radius: 8px; padding: 8px 18px; font-size: 13px; font-weight: 500; border: none; }
-#primaryBtn  { background: #68191F; color: #F1ECE4; padding: 8px 22px; }
-#primaryBtn:hover  { background: #8B2329; }
-#primaryBtn:pressed{ background: #3D0B0E; }
-#dangerBtn   { background: #C0392B; color: #fff; }
-#dangerBtn:hover { background: #E74C3C; }
-#secondaryBtn{ background: #E0D6C8; color: #2D1A1A; border: 1px solid #C9B89E; }
-#secondaryBtn:hover { background: #D0C4B0; }
-#cancelBtn   { background: #E0D6C8; color: #2D1A1A; border: 1px solid #C9B89E; padding: 8px 18px; }
-#cancelBtn:hover { background: #D0C4B0; }
+QPushButton {
+    border-radius: 10px;
+    padding: 9px 20px;
+    font-size: 13px;
+    font-weight: 600;
+    border: none;
+    cursor: pointer;
+}
+#primaryBtn  { background: #4B72B8; color: #FFFFFF; }
+#primaryBtn:hover   { background: #3A5EA0; }
+#primaryBtn:pressed { background: #2D4B88; }
+#dangerBtn   { background: #E05252; color: #FFFFFF; }
+#dangerBtn:hover  { background: #C84040; }
+#secondaryBtn {
+    background: #F0F4FA;
+    color: #4B72B8;
+    border: 1.5px solid #D0DCEF;
+    font-weight: 600;
+}
+#secondaryBtn:hover { background: #E4EAF5; }
+#secondaryBtn:disabled { color: #B0BDD8; border-color: #E4EAF5; }
+#dangerBtn:disabled { background: #F5C0C0; color: #FFFFFF; }
+#cancelBtn {
+    background: #F0F4FA;
+    color: #7A8BAD;
+    border: 1.5px solid #D0DCEF;
+    padding: 9px 18px;
+}
+#cancelBtn:hover { background: #E4EAF5; color: #1A2340; }
 
 /* ── Table ── */
 QTableWidget {
-    background: #F1ECE4; border: none; gridline-color: #E0D6C8;
-    color: #2D1A1A; font-size: 13px;
-    selection-background-color: #F5DDD9;
-    alternate-background-color: #EAE2D6;
+    background: #FFFFFF;
+    border: none;
+    gridline-color: transparent;
+    color: #1A2340;
+    font-size: 13px;
+    selection-background-color: #EDF2FC;
+    alternate-background-color: #F8FAFD;
+    outline: none;
 }
-QTableWidget::item { padding: 10px 14px; border-bottom: 1px solid #E0D6C8; }
-QTableWidget::item:selected { background: #F5DDD9; color: #3D0B0E; }
+QTableWidget::item {
+    padding: 0 16px;
+    border-bottom: 1px solid #F0F4FA;
+    color: #1A2340;
+}
+QTableWidget::item:selected {
+    background: #EDF2FC;
+    color: #1A2340;
+}
 QHeaderView::section {
-    background: #EAE2D6; color: #7A5C5C; font-size: 11px; font-weight: 600;
-    text-transform: uppercase; letter-spacing: 0.8px;
-    padding: 10px 14px; border: none; border-bottom: 1.5px solid #C9B89E;
-    border-right: 1px solid #C9B89E;
+    background: #F8FAFD;
+    color: #7A8BAD;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 0.7px;
+    padding: 12px 16px;
+    border: none;
+    border-bottom: 1px solid #E4EAF5;
+    text-transform: uppercase;
 }
-QHeaderView::section:hover { color: #2D1A1A; background: #DDD4C5; }
+QHeaderView { background: #F8FAFD; border-radius: 0; }
 
 /* ── Scrollbars ── */
-QScrollBar:vertical { background: #F1ECE4; width: 8px; border-radius: 4px; }
-QScrollBar::handle:vertical { background: #C9B89E; border-radius: 4px; min-height: 30px; }
-QScrollBar::handle:vertical:hover { background: #68191F; }
+QScrollBar:vertical {
+    background: transparent;
+    width: 6px;
+    margin: 4px 2px;
+}
+QScrollBar::handle:vertical {
+    background: #D0DCEF;
+    border-radius: 3px;
+    min-height: 30px;
+}
+QScrollBar::handle:vertical:hover { background: #4B72B8; }
 QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical { height: 0; }
+QScrollBar:horizontal { height: 0; }
 
 /* ── Pagination ── */
 #pageBtn {
-    background: #E0D6C8; color: #7A5C5C; border: 1px solid #C9B89E;
-    border-radius: 6px; min-width: 34px; max-width: 34px; min-height: 34px; max-height: 34px;
-    padding: 0; font-size: 13px;
+    background: #F0F4FA;
+    color: #7A8BAD;
+    border: 1.5px solid #E4EAF5;
+    border-radius: 8px;
+    min-width: 34px; max-width: 34px;
+    min-height: 34px; max-height: 34px;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 500;
 }
-#pageBtn:hover { background: #D0C4B0; color: #2D1A1A; }
+#pageBtn:hover { background: #E4EAF5; color: #1A2340; }
 #pageBtnActive {
-    background: #68191F; color: #F1ECE4; border: none;
-    border-radius: 6px; min-width: 34px; max-width: 34px; min-height: 34px; max-height: 34px;
-    padding: 0; font-size: 13px; font-weight: 600;
+    background: #4B72B8;
+    color: #FFFFFF;
+    border: none;
+    border-radius: 8px;
+    min-width: 34px; max-width: 34px;
+    min-height: 34px; max-height: 34px;
+    padding: 0;
+    font-size: 13px;
+    font-weight: 700;
 }
-#pageInfo { color: #7A5C5C; font-size: 12px; }
+#pageInfo { color: #7A8BAD; font-size: 12px; }
 
 /* ── Combo / Spin ── */
 QComboBox, QSpinBox {
-    background: #F1ECE4; border: 1.5px solid #C9B89E; border-radius: 8px;
-    color: #2D1A1A; padding: 7px 14px; font-size: 13px;
+    background: #F0F4FA;
+    border: 1.5px solid #E4EAF5;
+    border-radius: 10px;
+    color: #1A2340;
+    padding: 8px 14px;
+    font-size: 13px;
+    min-width: 80px;
 }
-QComboBox:focus, QSpinBox:focus { border-color: #68191F; }
+QComboBox:focus, QSpinBox:focus { border-color: #4B72B8; background: #FFFFFF; }
 QComboBox::drop-down { border: none; width: 28px; }
 QComboBox QAbstractItemView {
-    background: #F1ECE4; border: 1px solid #C9B89E;
-    color: #2D1A1A; selection-background-color: #F5DDD9;
+    background: #FFFFFF;
+    border: 1px solid #E4EAF5;
+    color: #1A2340;
+    selection-background-color: #EDF2FC;
+    outline: none;
 }
-
-/* ── Dialog ── */
-#dlgTitle  { font-size: 16px; font-weight: 700; color: #3D0B0E; }
-#dlgSep    { color: #C9B89E; background: #C9B89E; max-height: 1px; }
-#detailCode{ font-size: 20px; font-weight: 700; color: #68191F; }
-#detailVal { color: #2D1A1A; font-size: 13px; }
-#hintLabel { color: #7A5C5C; font-size: 11px; font-style: italic; }
-QFormLayout QLabel { color: #7A5C5C; font-size: 12px; font-weight: 500; }
+QSpinBox::up-button, QSpinBox::down-button { width: 0; }
 
 /* ── Bulk banner ── */
 #bulkBanner {
-    background: #3D0B0E; color: #F1ECE4;
-    padding: 8px 20px; font-size: 13px; font-weight: 500;
+    background: #FFF3E0;
+    border-bottom: 1px solid #FFD180;
+    min-height: 44px; max-height: 44px;
 }
-#bulkBannerLabel { color: #F1ECE4; font-size: 13px; font-weight: 500; }
+#bulkBannerLabel { color: #E65100; font-size: 13px; font-weight: 600; background: transparent; }
+
+/* ── Dialog ── */
+QDialog { background: #FFFFFF; }
+#dlgTitle  { font-size: 16px; font-weight: 700; color: #1A2340; background: transparent; }
+#dlgSep    { background: #E4EAF5; max-height: 1px; min-height: 1px; border: none; }
+#detailCode{ font-size: 22px; font-weight: 700; color: #1A2340; background: transparent; }
+#detailVal { color: #1A2340; font-size: 13px; background: transparent; }
+#hintLabel { color: #7A8BAD; font-size: 11px; font-style: italic; background: transparent; }
+QFormLayout QLabel { color: #7A8BAD; font-size: 12px; font-weight: 600; background: transparent; }
+QDialog QWidget { background: #FFFFFF; }
+QDialog QLineEdit { background: #F0F4FA; padding-left: 14px; }
+QDialog QComboBox { background: #F0F4FA; }
+QDialog QSpinBox  { background: #F0F4FA; }
+
+/* ── Message boxes ── */
+QMessageBox { background: #FFFFFF; }
+QMessageBox QLabel { background: transparent; color: #1A2340; }
+QMessageBox QPushButton { min-width: 80px; }
 """
 
+# ─────────────────────────────────────────────────────────────────────────────
+# Sidebar nav button
+# ─────────────────────────────────────────────────────────────────────────────
 
-# ── Table tab ─────────────────────────────────────────────────────────────────
+class NavButton(QPushButton):
+    def __init__(self, icon, label, parent=None):
+        super().__init__(f"  {icon}   {label}", parent)
+        self.setObjectName("navBtn")
+        self.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.setCheckable(False)
+        self._active = False
+
+    def set_active(self, active: bool):
+        self._active = active
+        self.setObjectName("navBtnActive" if active else "navBtn")
+        self.style().unpolish(self)
+        self.style().polish(self)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Search box with search icon painted inside
+# ─────────────────────────────────────────────────────────────────────────────
+
+class SearchBox(QLineEdit):
+    def __init__(self, placeholder="Search…", parent=None):
+        super().__init__(parent)
+        self.setPlaceholderText(placeholder)
+
+    def paintEvent(self, e):
+        super().paintEvent(e)
+        p = QPainter(self)
+        p.setRenderHint(QPainter.RenderHint.Antialiasing)
+        p.setPen(QColor("#7A8BAD"))
+        p.setFont(QFont("Segoe UI", 11))
+        p.drawText(12, 0, 20, self.height(), Qt.AlignmentFlag.AlignCenter, "🔍")
+        p.end()
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Table tab  (the main content pane for each section)
+# ─────────────────────────────────────────────────────────────────────────────
 
 class TableTab(QWidget):
-    PER_PAGE = 25
-
-    def __init__(self, columns, fetch_fn, add_fn, edit_fn, delete_fn,
-                 detail_fn, delete_label="record", parent=None):
+    def __init__(self, title, subtitle, stat_icon,
+                 columns, fetch_fn, add_fn, edit_fn,
+                 delete_fn, detail_fn, delete_label="record", parent=None):
         super().__init__(parent)
+        self.title        = title
+        self.subtitle     = subtitle
+        self.stat_icon    = stat_icon
         self.columns      = columns
         self.fetch_fn     = fetch_fn
         self.add_fn       = add_fn
@@ -171,11 +349,10 @@ class TableTab(QWidget):
         self.detail_fn    = detail_fn
         self.delete_label = delete_label
 
-        self.current_page = 1
+        self.current_page  = 1
         self.total_records = 0
-        self.sort_col  = columns[0][1]
-        self.sort_dir  = "ASC"
-        self._rows_data = []
+        self.sort_col      = columns[0][1]
+        self.sort_dir      = "ASC"
 
         self._search_timer = QTimer()
         self._search_timer.setSingleShot(True)
@@ -184,45 +361,76 @@ class TableTab(QWidget):
         self._build_ui()
         self.refresh()
 
-    # ── Build UI ──────────────────────────────────────────────────────────────
-
+    # ── layout ────────────────────────────────────────────────────────────────
     def _build_ui(self):
         root = QVBoxLayout(self)
-        root.setSpacing(0); root.setContentsMargins(0, 0, 0, 0)
+        root.setSpacing(0)
+        root.setContentsMargins(0, 0, 0, 0)
 
-        # toolbar
-        toolbar = QFrame(); toolbar.setObjectName("toolbar")
-        tb = QHBoxLayout(toolbar); tb.setContentsMargins(20, 0, 20, 0); tb.setSpacing(10)
+        # ── page header
+        hdr = QFrame(); hdr.setObjectName("pageHeader")
+        hdr.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        hl = QHBoxLayout(hdr); hl.setContentsMargins(28, 18, 28, 18); hl.setSpacing(0)
+        titles = QVBoxLayout(); titles.setSpacing(2)
+        t = QLabel(self.title); t.setObjectName("pageTitle"); t.setStyleSheet("background:transparent;")
+        s = QLabel(self.subtitle); s.setObjectName("pageSubtitle"); s.setStyleSheet("background:transparent;")
+        titles.addWidget(t); titles.addWidget(s)
+        hl.addLayout(titles)
+        root.addWidget(hdr)
 
-        self.search_box = QLineEdit()
-        self.search_box.setPlaceholderText("🔍  Search…")
+        # ── scrollable content
+        content = QWidget(); content.setObjectName("contentArea")
+        cl = QVBoxLayout(content); cl.setContentsMargins(24, 20, 24, 20); cl.setSpacing(16)
+
+        # stats row
+        stats_row = QHBoxLayout(); stats_row.setSpacing(14)
+        self._total_card = self._make_stat_card(self.stat_icon, "0", "Total " + self.title)
+        stats_row.addWidget(self._total_card)
+        stats_row.addStretch()
+        cl.addLayout(stats_row)
+
+        # table card
+        table_card = QFrame(); table_card.setObjectName("tableCard")
+        tc = QVBoxLayout(table_card); tc.setSpacing(0); tc.setContentsMargins(0, 0, 0, 0)
+
+        # toolbar inside card
+        toolbar = QFrame(); toolbar.setObjectName("cardToolbar")
+        toolbar.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+        tb = QHBoxLayout(toolbar); tb.setContentsMargins(16, 14, 16, 14); tb.setSpacing(10)
+
+        self.search_box = SearchBox(f"Search {self.title.lower()}…")
         self.search_box.textChanged.connect(self._on_search_changed)
         tb.addWidget(self.search_box)
 
+        row_lbl = QLabel("Rows:"); row_lbl.setStyleSheet("color:#7A8BAD; font-size:12px; background:transparent;")
         self.per_page_combo = QComboBox()
         self.per_page_combo.addItems(["10", "25", "50", "100"])
         self.per_page_combo.setCurrentText("25")
+        self.per_page_combo.setFixedWidth(80)
         self.per_page_combo.currentTextChanged.connect(self._on_per_page_changed)
-        tb.addWidget(QLabel("Rows:")); tb.addWidget(self.per_page_combo)
+        tb.addWidget(row_lbl); tb.addWidget(self.per_page_combo)
         tb.addStretch()
 
-        self.add_btn  = self._mk_btn("＋  Add",    "primaryBtn",   self._on_add)
-        self.edit_btn = self._mk_btn("✎  Edit",    "secondaryBtn", self._on_edit,  False)
-        self.del_btn  = self._mk_btn("🗑  Delete",  "dangerBtn",    self._on_delete, False)
-
+        self.add_btn  = self._mk_btn("＋  Add",   "primaryBtn",   self._on_add)
+        self.edit_btn = self._mk_btn("✎  Edit",   "secondaryBtn", self._on_edit,  False)
+        self.del_btn  = self._mk_btn("🗑  Delete", "dangerBtn",    self._on_delete, False)
         tb.addWidget(self.edit_btn); tb.addWidget(self.del_btn); tb.addWidget(self.add_btn)
-        root.addWidget(toolbar)
+        tc.addWidget(toolbar)
 
-        # bulk banner (hidden by default)
+        # bulk banner
         self.bulk_banner = QFrame(); self.bulk_banner.setObjectName("bulkBanner")
-        bb = QHBoxLayout(self.bulk_banner); bb.setContentsMargins(20, 0, 20, 0)
+        bb = QHBoxLayout(self.bulk_banner); bb.setContentsMargins(16, 0, 16, 0); bb.setSpacing(10)
         self.bulk_label = QLabel(); self.bulk_label.setObjectName("bulkBannerLabel")
-        bulk_del = self._mk_btn("🗑  Delete Selected", "dangerBtn", self._on_bulk_delete)
-        bulk_clr = self._mk_btn("✕  Clear Selection",  "cancelBtn", self._clear_selection)
-        bb.addWidget(self.bulk_label); bb.addStretch()
-        bb.addWidget(bulk_del); bb.addWidget(bulk_clr)
+        b_del = self._mk_btn("Delete Selected", "dangerBtn",    self._on_bulk_delete)
+        b_clr = self._mk_btn("Clear",           "cancelBtn",    self._clear_selection)
+        bb.addWidget(self.bulk_label); bb.addStretch(); bb.addWidget(b_del); bb.addWidget(b_clr)
         self.bulk_banner.setVisible(False)
-        root.addWidget(self.bulk_banner)
+        tc.addWidget(self.bulk_banner)
+
+        # separator
+        sep = QFrame(); sep.setFrameShape(QFrame.Shape.HLine)
+        sep.setStyleSheet("background: #E4EAF5; max-height:1px; border:none;")
+        tc.addWidget(sep)
 
         # table
         self.table = QTableWidget()
@@ -234,30 +442,53 @@ class TableTab(QWidget):
         self.table.verticalHeader().setVisible(False)
         self.table.setAlternatingRowColors(True)
         self.table.setShowGrid(False)
+        self.table.setFocusPolicy(Qt.FocusPolicy.NoFocus)
         self.table.horizontalHeader().setSectionResizeMode(QHeaderView.ResizeMode.Stretch)
         self.table.horizontalHeader().sectionClicked.connect(self._on_header_clicked)
         self.table.itemSelectionChanged.connect(self._on_selection_changed)
         self.table.doubleClicked.connect(self._on_double_click)
-        root.addWidget(self.table, 1)
+        tc.addWidget(self.table, 1)
 
-        # pagination bar
-        pag_frame = QFrame(); pag_frame.setObjectName("toolbar")
-        pl = QHBoxLayout(pag_frame); pl.setContentsMargins(20, 8, 20, 8)
+        # pagination footer
+        pag_frame = QFrame()
+        pag_frame.setStyleSheet("background:#FFFFFF; border-top: 1px solid #F0F4FA; border-radius: 0 0 14px 14px;")
+        pl = QHBoxLayout(pag_frame); pl.setContentsMargins(16, 10, 16, 10); pl.setSpacing(6)
         self.page_info = QLabel(); self.page_info.setObjectName("pageInfo")
+        self.page_info.setStyleSheet("background:transparent;")
         pl.addWidget(self.page_info); pl.addStretch()
         self.pag_container = QHBoxLayout(); self.pag_container.setSpacing(4)
         pl.addLayout(self.pag_container)
-        root.addWidget(pag_frame)
+        tc.addWidget(pag_frame)
+
+        cl.addWidget(table_card, 1)
+        root.addWidget(content, 1)
+
+    def _make_stat_card(self, icon, number, label):
+        card = QFrame(); card.setObjectName("statCard")
+        card.setFixedHeight(88); card.setFixedWidth(200)
+        lay = QHBoxLayout(card); lay.setContentsMargins(18, 0, 18, 0); lay.setSpacing(14)
+
+        icon_lbl = QLabel(icon); icon_lbl.setObjectName("statIcon")
+        icon_lbl.setStyleSheet("background: #EDF2FC; border-radius: 10px; padding: 8px; background: transparent;")
+        lay.addWidget(icon_lbl)
+
+        txt = QVBoxLayout(); txt.setSpacing(2)
+        self._stat_num = QLabel(number); self._stat_num.setObjectName("statNumber")
+        self._stat_num.setStyleSheet("background:transparent;")
+        lbl = QLabel(label.upper()); lbl.setObjectName("statLabel")
+        lbl.setStyleSheet("background:transparent;")
+        txt.addWidget(self._stat_num); txt.addWidget(lbl)
+        lay.addLayout(txt)
+        card._num_lbl = self._stat_num
+        return card
 
     def _mk_btn(self, text, obj, slot, enabled=True):
         b = QPushButton(text); b.setObjectName(obj)
         b.setCursor(Qt.CursorShape.PointingHandCursor)
-        b.setEnabled(enabled)
-        b.clicked.connect(slot)
+        b.setEnabled(enabled); b.clicked.connect(slot)
         return b
 
-    # ── Data ──────────────────────────────────────────────────────────────────
-
+    # ── data ──────────────────────────────────────────────────────────────────
     def refresh(self):
         search   = self.search_box.text().strip()
         per_page = int(self.per_page_combo.currentText())
@@ -265,31 +496,28 @@ class TableTab(QWidget):
                                     sort_dir=self.sort_dir, page=self.current_page,
                                     per_page=per_page)
         self.total_records = total
+        self._total_card._num_lbl.setText(f"{total:,}")
         self._populate(rows)
         self._update_pagination(total, per_page)
 
     def _populate(self, rows):
         self.table.setRowCount(0)
-        self._rows_data = rows
         self._update_selection_ui()
-
         for row_data in rows:
-            r = self.table.rowCount()
-            self.table.insertRow(r)
-            for ci, (header, key) in enumerate(self.columns):
-                val = str(row_data.get(key, "") if row_data.get(key) is not None else "N/A")
+            r = self.table.rowCount(); self.table.insertRow(r)
+            for ci, (_, key) in enumerate(self.columns):
+                val = str(row_data.get(key) if row_data.get(key) is not None else "N/A")
                 item = QTableWidgetItem(val)
                 item.setData(Qt.ItemDataRole.UserRole, row_data)
                 self.table.setItem(r, ci, item)
-            self.table.setRowHeight(r, 42)
+            self.table.setRowHeight(r, 46)
 
     def _update_pagination(self, total, per_page):
         total_pages = max(1, (total + per_page - 1) // per_page)
         if self.current_page > total_pages: self.current_page = total_pages
-
         start = (self.current_page - 1) * per_page + 1
         end   = min(self.current_page * per_page, total)
-        self.page_info.setText(f"Showing {start}–{end} of {total:,} records")
+        self.page_info.setText(f"Showing {start}–{end} of {total:,}")
 
         while self.pag_container.count():
             w = self.pag_container.takeAt(0)
@@ -307,7 +535,8 @@ class TableTab(QWidget):
         for p in self._page_range(self.current_page, total_pages):
             if prev is not None and p - prev > 1:
                 d = QLabel("…"); d.setObjectName("pageInfo")
-                d.setAlignment(Qt.AlignmentFlag.AlignCenter); d.setFixedWidth(28)
+                d.setStyleSheet("background:transparent;")
+                d.setAlignment(Qt.AlignmentFlag.AlignCenter); d.setFixedWidth(24)
                 self.pag_container.addWidget(d)
             self.pag_container.addWidget(mkb(p, p, active=(p == self.current_page)))
             prev = p
@@ -321,157 +550,146 @@ class TableTab(QWidget):
             if 1 <= p <= total: pages.add(p)
         return sorted(pages)
 
-    def _go_page(self, page):
-        self.current_page = page; self.refresh()
+    def _go_page(self, page): self.current_page = page; self.refresh()
 
-    # ── Events ────────────────────────────────────────────────────────────────
-
-    def _on_search_changed(self):
-        self.current_page = 1; self._search_timer.start(300)
-
+    # ── events ────────────────────────────────────────────────────────────────
+    def _on_search_changed(self): self.current_page = 1; self._search_timer.start(300)
     def _do_search(self): self.refresh()
-
-    def _on_per_page_changed(self):
-        self.current_page = 1; self.refresh()
+    def _on_per_page_changed(self): self.current_page = 1; self.refresh()
 
     def _on_header_clicked(self, idx):
         key = self.columns[idx][1]
-        if self.sort_col == key:
-            self.sort_dir = "DESC" if self.sort_dir == "ASC" else "ASC"
-        else:
-            self.sort_col = key; self.sort_dir = "ASC"
-        self.current_page = 1; self.refresh()
+        self.sort_dir = "DESC" if self.sort_col == key and self.sort_dir == "ASC" else "ASC"
+        self.sort_col = key; self.current_page = 1; self.refresh()
 
-    def _on_selection_changed(self):
-        self._update_selection_ui()
+    def _on_selection_changed(self): self._update_selection_ui()
 
     def _update_selection_ui(self):
-        sel = self._selected_rows()
-        n = len(sel)
-        single = n == 1
-
-        self.edit_btn.setEnabled(single)
-        self.del_btn.setEnabled(single)
-
+        sel = self._selected_rows(); n = len(sel)
+        self.edit_btn.setEnabled(n == 1)
+        self.del_btn.setEnabled(n == 1)
+        self.bulk_banner.setVisible(n > 1)
         if n > 1:
-            self.bulk_banner.setVisible(True)
-            self.bulk_label.setText(f"{n} rows selected — bulk delete enabled")
-        else:
-            self.bulk_banner.setVisible(False)
+            self.bulk_label.setText(f"  {n} rows selected")
 
     def _selected_rows(self):
-        seen = set()
-        rows = []
+        seen, rows = set(), []
         for item in self.table.selectedItems():
             r = item.row()
             if r not in seen:
-                seen.add(r)
-                rows.append(item.data(Qt.ItemDataRole.UserRole))
+                seen.add(r); rows.append(item.data(Qt.ItemDataRole.UserRole))
         return rows
 
-    def _clear_selection(self):
-        self.table.clearSelection()
+    def _clear_selection(self): self.table.clearSelection()
 
     def _on_add(self):
-        dlg = self.add_fn(self)
-        if dlg.exec(): self.refresh()
+        if self.add_fn(self).exec(): self.refresh()
 
     def _on_edit(self):
         rows = self._selected_rows()
-        if not rows: return
-        dlg = self.edit_fn(self, rows[0])
-        if dlg.exec(): self.refresh()
+        if rows and self.edit_fn(self, rows[0]).exec(): self.refresh()
 
     def _on_double_click(self, index):
         item = self.table.item(index.row(), 0)
-        if not item: return
-        row_data = item.data(Qt.ItemDataRole.UserRole)
-        self.detail_fn(self, row_data).exec()
+        if item: self.detail_fn(self, item.data(Qt.ItemDataRole.UserRole)).exec()
 
-    def _on_delete(self):
-        rows = self._selected_rows()
-        if not rows: return
-        self._confirm_and_delete(rows)
-
-    def _on_bulk_delete(self):
-        rows = self._selected_rows()
-        if not rows: return
-        self._confirm_and_delete(rows)
+    def _on_delete(self): self._confirm_and_delete(self._selected_rows())
+    def _on_bulk_delete(self): self._confirm_and_delete(self._selected_rows())
 
     def _confirm_and_delete(self, rows):
+        if not rows: return
         n = len(rows)
         name = (rows[0].get("name") or rows[0].get("id") or "this record") if n == 1 else f"{n} {self.delete_label}s"
-        reply = QMessageBox.question(
-            self, "Confirm Delete",
-            f"<b>Delete {name}?</b><br><br>This action cannot be undone.",
-            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
-        )
-        if reply != QMessageBox.StandardButton.Yes: return
-
-        errors = []
-        for row in rows:
-            ok, err = self.delete_fn(row)
-            if not ok: errors.append(err)
-
-        if errors:
-            QMessageBox.warning(self, "Some deletions failed",
-                                "\n".join(set(errors)))
+        if QMessageBox.question(self, "Confirm Delete",
+                                f"<b>Delete {name}?</b><br><br>This cannot be undone.",
+                                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.Cancel
+                                ) != QMessageBox.StandardButton.Yes:
+            return
+        errors = [err for row in rows for ok, err in [self.delete_fn(row)] if not ok]
+        if errors: QMessageBox.warning(self, "Some deletions failed", "\n".join(set(errors)))
         self.refresh()
 
 
-# ── DB delete wrappers ────────────────────────────────────────────────────────
-
+# ─────────────────────────────────────────────────────────────────────────────
+# DB wrappers
+# ─────────────────────────────────────────────────────────────────────────────
 def _del_college(row): return db.college_delete(row["code"])
 def _del_program(row): return db.program_delete(row["code"])
 def _del_student(row): return db.student_delete(row["id"])
 
 
-# ── Main Window ───────────────────────────────────────────────────────────────
-
+# ─────────────────────────────────────────────────────────────────────────────
+# Main Window
+# ─────────────────────────────────────────────────────────────────────────────
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("MSU-IIT Student Information System")
-        self.setMinimumSize(1100, 700); self.resize(1300, 800)
+        self.setMinimumSize(1100, 680); self.resize(1340, 820)
         self.setStyleSheet(STYLE)
         self._build_ui()
 
     def _build_ui(self):
-        central = QWidget(); self.setCentralWidget(central)
-        root = QVBoxLayout(central); root.setSpacing(0); root.setContentsMargins(0,0,0,0)
+        root_widget = QWidget()
+        root_widget.setStyleSheet("background: #F0F4FA;")
+        self.setCentralWidget(root_widget)
+        root = QHBoxLayout(root_widget)
+        root.setSpacing(0); root.setContentsMargins(0, 0, 0, 0)
 
-        # ── Header
-        header = QFrame(); header.setObjectName("header")
-        hl = QHBoxLayout(header); hl.setContentsMargins(28, 0, 28, 0)
-        col = QVBoxLayout(); col.setSpacing(2)
-        t = QLabel("MSU-IIT Student Information System"); t.setObjectName("appTitle")
-        s = QLabel("MINDANAO STATE UNIVERSITY · ILIGAN INSTITUTE OF TECHNOLOGY"); s.setObjectName("appSubtitle")
-        col.addWidget(t); col.addWidget(s)
-        hl.addLayout(col); hl.addStretch()
-        root.addWidget(header)
+        # ── Sidebar ────────────────────────────────────────────────────────────
+        sidebar = QFrame(); sidebar.setObjectName("sidebar")
+        sidebar.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Expanding)
+        sl = QVBoxLayout(sidebar); sl.setSpacing(0); sl.setContentsMargins(12, 0, 12, 20)
 
-        # ── Stats bar
-        sb_frame = QFrame(); sb_frame.setObjectName("statsBar")
-        sb = QHBoxLayout(sb_frame); sb.setContentsMargins(28, 14, 28, 14); sb.setSpacing(14)
-        self.stat_students = self._stat_card("0", "Students")
-        self.stat_programs = self._stat_card("0", "Programs")
-        self.stat_colleges = self._stat_card("0", "Colleges")
-        sb.addWidget(self.stat_students); sb.addWidget(self.stat_programs); sb.addWidget(self.stat_colleges)
-        sb.addStretch()
-        refresh_btn = QPushButton("↻  Refresh"); refresh_btn.setObjectName("secondaryBtn")
-        refresh_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        refresh_btn.clicked.connect(self._refresh_stats)
-        sb.addWidget(refresh_btn)
-        root.addWidget(sb_frame)
+        # logo block
+        logo_block = QWidget(); logo_block.setStyleSheet("background:transparent;")
+        ll = QVBoxLayout(logo_block); ll.setContentsMargins(10, 22, 10, 18); ll.setSpacing(3)
+        logo_title = QLabel("MSU-IIT SIS"); logo_title.setObjectName("sidebarLogo")
+        logo_title.setStyleSheet("background:transparent;")
+        logo_sub = QLabel("STUDENT INFORMATION SYSTEM"); logo_sub.setObjectName("sidebarSub")
+        logo_sub.setStyleSheet("background:transparent;")
+        logo_sub.setWordWrap(True)
+        ll.addWidget(logo_title); ll.addWidget(logo_sub)
+        sl.addWidget(logo_block)
 
-        # ── Tabs
-        tabs = QTabWidget(); tabs.setDocumentMode(True)
+        div = QFrame(); div.setObjectName("sidebarDivider"); sl.addWidget(div)
+        sl.addSpacing(18)
+
+        sect = QLabel("MANAGE"); sect.setObjectName("sidebarSectionLabel")
+        sect.setStyleSheet("background:transparent;")
+        sl.addWidget(sect); sl.addSpacing(8)
+
+        # nav buttons
+        self._nav_btns = []
+        nav_items = [
+            ("🎓", "Students"),
+            ("📚", "Programs"),
+            ("🏛", "Colleges"),
+        ]
+        for icon, label in nav_items:
+            btn = NavButton(icon, label)
+            btn.setFixedHeight(42)
+            btn.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
+            sl.addWidget(btn)
+            self._nav_btns.append(btn)
+
+        sl.addStretch()
+
+        # version footer
+        ver = QLabel("v2.0  ·  SQLite"); ver.setObjectName("sidebarSub")
+        ver.setStyleSheet("background:transparent; padding: 0 10px;")
+        sl.addWidget(ver)
+        root.addWidget(sidebar)
+
+        # ── Stacked content ────────────────────────────────────────────────────
+        self._stack = QStackedWidget()
+        self._stack.setObjectName("contentArea")
 
         student_tab = TableTab(
-            columns=[
-                ("Student ID", "id"), ("First Name", "firstname"), ("Last Name", "lastname"),
-                ("Program", "course"), ("Year", "year"), ("Gender", "gender"),
-            ],
+            title="Students", subtitle="Manage enrolled students",
+            stat_icon="🎓",
+            columns=[("Student ID","id"),("First Name","firstname"),("Last Name","lastname"),
+                     ("Program","course"),("Year","year"),("Gender","gender")],
             fetch_fn=db.student_list,
             add_fn=lambda p: StudentDialog(p),
             edit_fn=lambda p, row: StudentDialog(p, db.student_get(row["id"])),
@@ -479,12 +697,10 @@ class MainWindow(QMainWindow):
             detail_fn=lambda p, row: StudentDetailDialog(p, db.student_get(row["id"])),
             delete_label="student",
         )
-
         program_tab = TableTab(
-            columns=[
-                ("Code", "code"), ("Program Name", "name"),
-                ("College", "college"), ("# Students", "student_count"),
-            ],
+            title="Programs", subtitle="Manage academic programs",
+            stat_icon="📚",
+            columns=[("Code","code"),("Program Name","name"),("College","college"),("# Students","student_count")],
             fetch_fn=db.program_list,
             add_fn=lambda p: ProgramDialog(p),
             edit_fn=lambda p, row: ProgramDialog(p, db.program_get(row["code"])),
@@ -492,11 +708,10 @@ class MainWindow(QMainWindow):
             detail_fn=lambda p, row: ProgramDetailDialog(p, db.program_get_detail(row["code"])),
             delete_label="program",
         )
-
         college_tab = TableTab(
-            columns=[
-                ("Code", "code"), ("College Name", "name"), ("# Programs", "program_count"),
-            ],
+            title="Colleges", subtitle="Manage colleges and faculties",
+            stat_icon="🏛",
+            columns=[("Code","code"),("College Name","name"),("# Programs","program_count")],
             fetch_fn=db.college_list,
             add_fn=lambda p: CollegeDialog(p),
             edit_fn=lambda p, row: CollegeDialog(p, db.college_get(row["code"])),
@@ -505,36 +720,32 @@ class MainWindow(QMainWindow):
             delete_label="college",
         )
 
-        tabs.addTab(student_tab,  "  🎓  Students  ")
-        tabs.addTab(program_tab,  "  📚  Programs  ")
-        tabs.addTab(college_tab,  "  🏛  Colleges  ")
-        tabs.currentChanged.connect(lambda _: self._refresh_stats())
-        root.addWidget(tabs, 1)
-        self._refresh_stats()
+        self._tabs = [student_tab, program_tab, college_tab]
+        for tab in self._tabs:
+            self._stack.addWidget(tab)
 
-    def _stat_card(self, number, label):
-        card = QFrame(); card.setObjectName("statCard")
-        lay = QVBoxLayout(card); lay.setContentsMargins(0,0,0,0); lay.setSpacing(2)
-        n = QLabel(number); n.setObjectName("statNumber")
-        l = QLabel(label);  l.setObjectName("statLabel")
-        lay.addWidget(n); lay.addWidget(l)
-        card._num_lbl = n
-        return card
+        root.addWidget(self._stack, 1)
 
-    def _refresh_stats(self):
-        students, programs, colleges = db.get_stats()
-        self.stat_students._num_lbl.setText(f"{students:,}")
-        self.stat_programs._num_lbl.setText(f"{programs:,}")
-        self.stat_colleges._num_lbl.setText(f"{colleges:,}")
+        # wire nav buttons
+        for i, btn in enumerate(self._nav_btns):
+            btn.clicked.connect(lambda _, idx=i: self._switch_tab(idx))
+
+        self._switch_tab(0)
+
+    def _switch_tab(self, idx):
+        self._stack.setCurrentIndex(idx)
+        for i, btn in enumerate(self._nav_btns):
+            btn.set_active(i == idx)
 
 
+# ─────────────────────────────────────────────────────────────────────────────
 def main():
     db.init_db()
     seed()
     app = QApplication(sys.argv)
     app.setApplicationName("MSU-IIT SIS")
-    window = MainWindow()
-    window.show()
+    win = MainWindow()
+    win.show()
     sys.exit(app.exec())
 
 if __name__ == "__main__":
