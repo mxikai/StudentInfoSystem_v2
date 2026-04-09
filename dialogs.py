@@ -287,8 +287,8 @@ class StudentDialog(QDialog):
         form = QFormLayout(); form.setSpacing(12); form.setLabelAlignment(Qt.AlignmentFlag.AlignRight)
 
         self.id_edit = QLineEdit(); self.id_edit.setPlaceholderText("YYYY-NNNN  e.g. 2024-0001"); self.id_edit.setMaxLength(9)
-        self.first_edit = QLineEdit(); self.first_edit.setPlaceholderText("First name (letters and hyphens only)")
-        self.last_edit  = QLineEdit(); self.last_edit.setPlaceholderText("Last name (letters and hyphens only)")
+        self.first_edit = QLineEdit(); self.first_edit.setPlaceholderText("First name")
+        self.last_edit  = QLineEdit(); self.last_edit.setPlaceholderText("Last name")
         self.course_combo = QComboBox()
         for p in db.program_all():
             self.course_combo.addItem(f"{p['code']} — {p['name']}", p["code"])
