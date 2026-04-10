@@ -236,8 +236,8 @@ class PillToggle(QWidget):
 
         # Animation: float 0→1 drives knob position
         self._anim = QPropertyAnimation(self, b"knob_pos", self)
-        self._anim.setDuration(280)
-        self._anim.setEasingCurve(QEasingCurve.Type.InOutCubic)
+        self._anim.setDuration(480)
+        self._anim.setEasingCurve(QEasingCurve.Type.InOutSine)
 
     # pyqtProperty so QPropertyAnimation can drive it
     def _get_knob_pos(self): return self._anim_t
@@ -368,7 +368,7 @@ class FadeOverlay(QWidget):
         self.show()
 
         STEPS     = 18
-        FADE_MS   = 14   # ms per step → ~250ms total each way
+        FADE_MS   = 12   # ms per step 
 
         self._step     = 0
         self._total    = STEPS
