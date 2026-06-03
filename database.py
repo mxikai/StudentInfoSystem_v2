@@ -180,7 +180,7 @@ def program_delete(code):
     conn = get_connection()
     try:
         conn.execute("PRAGMA foreign_keys = OFF")
-        conn.execute("UPDATE student SET course='N/A' WHERE course=?", (code,))
+        conn.execute("UPDATE student SET course='NOT ENROLLED' WHERE course=?", (code,))
         conn.execute("DELETE FROM program WHERE code=?", (code,))
         conn.commit()
         return True, None
