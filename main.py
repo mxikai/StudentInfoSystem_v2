@@ -668,7 +668,16 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(self.student_tab,"  🎓  Students  ")
         self.tabs.addTab(self.program_tab,"  📚  Programs  ")
         self.tabs.addTab(self.college_tab,"  🏛  Colleges  ")
-        self.tabs.currentChanged.connect(lambda _:self._refresh_stats())
+        
+        # Refresh stats AND refresh the active tab's table whenever a tab is clicked
+        def _on_tab_changed(idx):
+            self._refresh_stats()
+            current_tab = self.tabs.widget(idx)
+            if hasattr(current_tab, 'refresh'):
+                current_tab.refresh()
+                
+        self.tabs.currentChanged.connect(_on_tab_changed)
+        
         root.addWidget(self.tabs,1)
 
         # ── Fade overlay (on top of everything)
